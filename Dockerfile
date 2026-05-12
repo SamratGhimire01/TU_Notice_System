@@ -1,18 +1,33 @@
-# Use the official Python image
-FROM python:3.10
+# ── Base image ────────────────────────────────────────────────────────────────
+FROM python:3.10-slim
 
-# Set the working directory
+# ── System deps (slim image needs these for some wheels) ──────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Working directory ─────────────────────────────────────────────────────────
 WORKDIR /code
 
-# Copy the requirements file
+# ── Python dependencies ───────────────────────────────────────────────────────
 COPY ./requirements.txt /code/requirements.txt
-
-# Install the dependencies
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
-# Copy the application code
-COPY ./app /code/app
+# ── Application code ──────────────────────────────────────────────────────────
+COPY ./app       /code/app
 COPY ./templates /code/templates
 
-# Start the FastAPI app
+# ── Ensure downloads directory exists inside container ────────────────────────
+RUN mkdir -p /code/downloads
+
+# ── Python path so `from app.xxx import` works ────────────────────────────────
+ENV PYTHONPATH=/code
+
+# ── Hugging Face Spaces runs as a non-root user; set permissions ──────────────
+RUN chmod -R 777 /code/downloads
+
+# ── Port exposed (must match README.md app_port) ──────────────────────────────
+EXPOSE 7860
+
+# ── Start server ──────────────────────────────────────────────────────────────
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]

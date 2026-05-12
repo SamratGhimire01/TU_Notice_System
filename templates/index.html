@@ -1,107 +1,302 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>TU Academic Hub</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TU Notice Hub</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
         .edu-nav { background: linear-gradient(to right, #1e3a8a, #1e40af); }
         .sidebar-scroll::-webkit-scrollbar { width: 4px; }
-        .sidebar-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        .card-active-blue    { background-color: #dbeafe; border-left-color: #2563eb; }
+        .card-active-emerald { background-color: #d1fae5; border-left-color: #059669; }
     </style>
 </head>
 <body class="bg-slate-50 h-screen overflow-hidden flex flex-col font-sans">
 
+    <!-- NAV -->
     <nav class="edu-nav text-white p-4 flex justify-between items-center shadow-lg">
         <div class="flex items-center space-x-3">
             <i class="bi bi-bank2 text-2xl text-amber-400"></i>
             <h1 class="font-black text-lg tracking-widest uppercase">TU Notice Archive</h1>
         </div>
-        <button onclick="runScrape()" id="scrapeBtn" class="bg-amber-500 hover:bg-amber-400 text-blue-900 font-bold px-5 py-2 rounded-md transition">
-            <i class="bi bi-arrow-repeat mr-2"></i>SYNC NOTICES
+        <button onclick="runScrape()" id="scrapeBtn"
+                class="bg-amber-500 hover:bg-amber-400 text-blue-900 font-bold px-5 py-2 rounded-md transition flex items-center gap-2">
+            <i class="bi bi-arrow-repeat" id="syncIcon"></i>
+            <span id="btnText">SYNC NOTICES</span>
         </button>
     </nav>
 
+    <!-- BODY -->
     <div class="flex flex-1 overflow-hidden">
+
+        <!-- SIDEBAR -->
         <aside class="w-1/3 bg-white border-r flex flex-col shadow-inner">
-            <div class="p-3 bg-slate-800 text-white text-[10px] font-bold uppercase tracking-[0.2em]">TU Central Office</div>
+
+            <!-- TU Central -->
+            <div class="p-3 bg-slate-800 text-white text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center">
+                <span>TU Central Office</span>
+                <span class="opacity-60 bg-slate-600 px-2 py-0.5 rounded-full">{{ tu_notices|length }}</span>
+            </div>
             <div class="overflow-y-auto h-1/2 border-b-2 sidebar-scroll">
                 {% for n in tu_notices %}
-                <div onclick="show('tu-{{loop.index}}')" id="card-tu-{{loop.index}}" class="p-4 border-b hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent">
-                    <h3 class="text-sm font-bold text-slate-700 line-clamp-2">{{ n.main_page_title }}</h3>
+                <div onclick="show('tu-{{ loop.index }}')"
+                     id="card-tu-{{ loop.index }}"
+                     class="p-4 border-b hover:bg-blue-50 cursor-pointer border-l-4 border-l-transparent transition-all">
+                    <h3 class="text-sm font-semibold text-slate-700 line-clamp-2">{{ n.main_page_title }}</h3>
+                    {% if n.date_scraped %}
+                    <p class="text-[10px] text-slate-400 mt-1">{{ n.date_scraped.strftime('%Y-%m-%d') }}</p>
+                    {% endif %}
                 </div>
+                {% else %}
+                <p class="p-4 text-sm text-slate-400 italic">No TU Central notices yet. Click SYNC.</p>
                 {% endfor %}
             </div>
 
-            <div class="p-3 bg-emerald-900 text-white text-[10px] font-bold uppercase tracking-[0.2em]">Humanities & Social Science</div>
+            <!-- Humanities -->
+            <div class="p-3 bg-emerald-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] flex justify-between items-center">
+                <span>Humanities &amp; Social Science</span>
+                <span class="opacity-60 bg-emerald-700 px-2 py-0.5 rounded-full">{{ humanities_notices|length }}</span>
+            </div>
             <div class="flex-1 overflow-y-auto sidebar-scroll">
                 {% for n in humanities_notices %}
-                <div onclick="show('hum-{{loop.index}}')" id="card-hum-{{loop.index}}" class="p-4 border-b hover:bg-emerald-50 cursor-pointer border-l-4 border-l-transparent">
-                    <h3 class="text-sm font-bold text-slate-700 line-clamp-2">{{ n.main_page_title }}</h3>
+                <div onclick="show('hum-{{ loop.index }}')"
+                     id="card-hum-{{ loop.index }}"
+                     class="p-4 border-b hover:bg-emerald-50 cursor-pointer border-l-4 border-l-transparent transition-all">
+                    <h3 class="text-sm font-semibold text-slate-700 line-clamp-2">{{ n.main_page_title }}</h3>
+                    {% if n.date_scraped %}
+                    <p class="text-[10px] text-slate-400 mt-1">{{ n.date_scraped.strftime('%Y-%m-%d') }}</p>
+                    {% endif %}
                 </div>
+                {% else %}
+                <p class="p-4 text-sm text-slate-400 italic">No Humanities notices yet. Click SYNC.</p>
                 {% endfor %}
             </div>
         </aside>
 
+        <!-- MAIN CONTENT -->
         <main class="flex-1 bg-white overflow-y-auto p-10 relative">
+
+            <!-- Welcome screen -->
             <div id="welcome" class="h-full flex flex-col items-center justify-center text-slate-300">
                 <i class="bi bi-book text-7xl mb-4"></i>
-                <p class="text-lg font-medium">Select a notice to view contents</p>
+                <p class="text-lg font-medium">Select a notice to view its contents</p>
             </div>
 
-            {% for n in tu_notices + humanities_notices %}
-            <div id="view-{% if n.category == 'TU_CENTRAL' %}tu-{{loop.index}}{% else %}hum-{{loop.index - tu_notices|length}}{% endif %}" class="hidden notice-pane animate-in fade-in duration-500">
-                <div class="max-w-3xl mx-auto">
-                    <h2 class="text-3xl font-extrabold text-slate-900 mb-8 leading-tight">{{ n.main_page_title }}</h2>
-                    
-                    <div class="space-y-6 mb-10">
-                        {% for file in n.attachments %}
-                            {% if file.type == 'jpg' %}
-                                <div class="rounded-xl overflow-hidden border shadow-lg bg-slate-100">
-                                    <img src="{{ file.url }}" class="w-full h-auto object-contain" loading="lazy">
-                                </div>
-                            {% elif file.type == 'pdf' %}
-                                <a href="{{ file.url }}" target="_blank" class="flex items-center p-5 bg-red-50 border-2 border-red-100 rounded-xl hover:bg-red-100 transition group">
-                                    <i class="bi bi-file-earmark-pdf-fill text-5xl text-red-600 mr-5"></i>
-                                    <div>
-                                        <p class="font-bold text-red-900">Download Official Document (PDF)</p>
-                                        <p class="text-xs text-red-700">Click to open in a new tab</p>
-                                    </div>
-                                    <i class="bi bi-chevron-right ml-auto text-red-400 group-hover:translate-x-1 transition-transform"></i>
-                                </a>
-                            {% endif %}
-                        {% endfor %}
-                    </div>
+            <!-- ── TU Central notice panes ───────────────────────────────── -->
+            {% for n in tu_notices %}
+            <div id="view-tu-{{ loop.index }}" class="hidden notice-pane fade-in">
+                <article class="max-w-3xl mx-auto">
+                    <span class="inline-block mb-4 text-xs font-bold uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1 rounded-full">TU Central</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900 mb-2 leading-tight">{{ n.main_page_title }}</h2>
+                    {% if n.date_scraped %}
+                    <p class="text-xs text-slate-400 mb-6">{{ n.date_scraped.strftime('%B %d, %Y') }}</p>
+                    {% endif %}
 
-                    <div class="prose max-w-none">
-                        <p class="whitespace-pre-line text-slate-800 text-lg leading-relaxed">{{ n.main_message }}</p>
-                    </div>
-                </div>
+                    <!-- Message -->
+                    {% if n.main_message %}
+                    <div class="whitespace-pre-line text-slate-700 text-base leading-relaxed bg-slate-50 p-6 rounded-lg border border-slate-100 mb-8">{{ n.main_message }}</div>
+                    {% endif %}
+
+                    <!-- Attachments: images shown directly, PDFs in table -->
+                    {% if n.attachments %}
+
+                        <!-- Images -->
+                        {% set images = n.attachments | selectattr('type', 'eq', 'jpg') | list %}
+                        {% for file in images %}
+                        <img src="{{ file.url }}" alt="Notice attachment"
+                             class="w-full rounded-xl shadow-md border mb-4" loading="lazy"
+                             onerror="this.style.display='none'">
+                        {% endfor %}
+
+                        <!-- PDF table -->
+                        {% set pdfs = n.attachments | selectattr('type', 'eq', 'pdf') | list %}
+                        {% if pdfs %}
+                        <div class="mt-4">
+                            <h3 class="flex items-center gap-2 text-slate-700 font-bold text-sm mb-3">
+                                <i class="bi bi-download text-blue-500"></i> Files
+                            </h3>
+                            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-slate-100 text-slate-600 text-xs uppercase tracking-wide">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left w-10">S.N</th>
+                                            <th class="px-4 py-3 text-left">Name</th>
+                                            <th class="px-4 py-3 text-center w-16">Type</th>
+                                            <th class="px-4 py-3 text-center w-24">Download</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        {% for file in pdfs %}
+                                        <tr class="hover:bg-slate-50 transition">
+                                            <td class="px-4 py-3 text-slate-400 font-mono">{{ loop.index }}</td>
+                                            <td class="px-4 py-3 text-slate-700 font-medium">
+                                                {% if file.name and file.name != file.url.split('/')[-1] %}
+                                                    {{ file.name }}
+                                                {% else %}
+                                                    {{ file.url.split('/')[-1] }}
+                                                {% endif %}
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="inline-flex items-center gap-1 bg-red-50 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <a href="{{ file.url }}" target="_blank" rel="noopener"
+                                                   class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                                                    <i class="bi bi-cloud-arrow-down"></i> Open
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+
+                    <a href="{{ n.link }}" target="_blank" rel="noopener"
+                       class="mt-8 inline-flex items-center gap-2 text-blue-600 hover:underline text-sm font-medium">
+                        <i class="bi bi-link-45deg"></i> View original notice
+                    </a>
+                </article>
+            </div>
+            {% endfor %}
+
+            <!-- ── Humanities notice panes ───────────────────────────────── -->
+            {% for n in humanities_notices %}
+            <div id="view-hum-{{ loop.index }}" class="hidden notice-pane fade-in">
+                <article class="max-w-3xl mx-auto">
+                    <span class="inline-block mb-4 text-xs font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">Humanities &amp; Social Science</span>
+                    <h2 class="text-2xl font-extrabold text-slate-900 mb-2 leading-tight">{{ n.main_page_title }}</h2>
+                    {% if n.date_scraped %}
+                    <p class="text-xs text-slate-400 mb-6">{{ n.date_scraped.strftime('%B %d, %Y') }}</p>
+                    {% endif %}
+
+                    <!-- Message -->
+                    {% if n.main_message %}
+                    <div class="whitespace-pre-line text-slate-700 text-base leading-relaxed bg-slate-50 p-6 rounded-lg border border-slate-100 mb-8">{{ n.main_message }}</div>
+                    {% endif %}
+
+                    <!-- Attachments -->
+                    {% if n.attachments %}
+
+                        <!-- Images -->
+                        {% set images = n.attachments | selectattr('type', 'eq', 'jpg') | list %}
+                        {% for file in images %}
+                        <img src="{{ file.url }}" alt="Notice attachment"
+                             class="w-full rounded-xl shadow-md border mb-4" loading="lazy"
+                             onerror="this.style.display='none'">
+                        {% endfor %}
+
+                        <!-- PDF table -->
+                        {% set pdfs = n.attachments | selectattr('type', 'eq', 'pdf') | list %}
+                        {% if pdfs %}
+                        <div class="mt-4">
+                            <h3 class="flex items-center gap-2 text-slate-700 font-bold text-sm mb-3">
+                                <i class="bi bi-download text-emerald-600"></i> Files
+                            </h3>
+                            <div class="overflow-x-auto rounded-xl border border-slate-200 shadow-sm">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-emerald-50 text-emerald-800 text-xs uppercase tracking-wide">
+                                        <tr>
+                                            <th class="px-4 py-3 text-left w-10">S.N</th>
+                                            <th class="px-4 py-3 text-left">Name</th>
+                                            <th class="px-4 py-3 text-center w-16">Type</th>
+                                            <th class="px-4 py-3 text-center w-24">Download</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        {% for file in pdfs %}
+                                        <tr class="hover:bg-emerald-50 transition">
+                                            <td class="px-4 py-3 text-slate-400 font-mono">{{ loop.index }}</td>
+                                            <td class="px-4 py-3 text-slate-700 font-medium">
+                                                {% if file.name and file.name != file.url.split('/')[-1] %}
+                                                    {{ file.name }}
+                                                {% else %}
+                                                    {{ file.url.split('/')[-1] }}
+                                                {% endif %}
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <span class="inline-flex items-center gap-1 bg-red-50 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                                </span>
+                                            </td>
+                                            <td class="px-4 py-3 text-center">
+                                                <a href="{{ file.url }}" target="_blank" rel="noopener"
+                                                   class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                                                    <i class="bi bi-cloud-arrow-down"></i> Open
+                                                </a>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+
+                    <a href="{{ n.link }}" target="_blank" rel="noopener"
+                       class="mt-8 inline-flex items-center gap-2 text-emerald-600 hover:underline text-sm font-medium">
+                        <i class="bi bi-link-45deg"></i> View original notice
+                    </a>
+                </article>
             </div>
             {% endfor %}
         </main>
     </div>
 
     <script>
+        let activeCardId = null;
+
         function show(id) {
             document.getElementById('welcome').classList.add('hidden');
             document.querySelectorAll('.notice-pane').forEach(p => p.classList.add('hidden'));
-            document.querySelectorAll('[id^="card-"]').forEach(c => c.classList.remove('bg-blue-100', 'border-l-blue-600', 'bg-emerald-100', 'border-l-emerald-600'));
-            
-            const pane = document.getElementById('view-' + id);
-            const card = document.getElementById('card-' + id);
-            
-            if(pane) pane.classList.remove('hidden');
-            if(card) {
-                const color = id.startsWith('tu') ? 'blue' : 'emerald';
-                card.classList.add(`bg-${color}-100`, `border-l-${color}-600`);
+
+            if (activeCardId) {
+                const prev = document.getElementById('card-' + activeCardId);
+                if (prev) prev.classList.remove('card-active-blue', 'card-active-emerald');
             }
+
+            const pane = document.getElementById('view-' + id);
+            if (pane) pane.classList.remove('hidden');
+
+            const card = document.getElementById('card-' + id);
+            if (card) {
+                card.classList.add(id.startsWith('tu') ? 'card-active-blue' : 'card-active-emerald');
+            }
+
+            activeCardId = id;
+            document.querySelector('main').scrollTop = 0;
         }
+
         async function runScrape() {
-            const btn = document.getElementById('scrapeBtn');
-            btn.disabled = true; btn.innerHTML = '<i class="bi bi-hourglass-split animate-spin mr-2"></i>WORKING...';
-            await fetch('/scrape', {method: 'POST'});
-            location.reload();
+            const btn  = document.getElementById('scrapeBtn');
+            const icon = document.getElementById('syncIcon');
+            const text = document.getElementById('btnText');
+
+            btn.disabled = true;
+            icon.classList.add('animate-spin');
+            text.textContent = 'SCRAPING…';
+
+            try {
+                const res    = await fetch('/scrape', { method: 'POST' });
+                const result = await res.json();
+                text.textContent = `Done! ${result.new_notices ?? 0} new notice(s)`;
+                setTimeout(() => location.reload(), 1500);
+            } catch (err) {
+                alert('Scrape failed — check server console.');
+                btn.disabled = false;
+                icon.classList.remove('animate-spin');
+                text.textContent = 'SYNC NOTICES';
+            }
         }
     </script>
 </body>
